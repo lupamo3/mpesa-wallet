@@ -1,8 +1,12 @@
 # standard python imports
 from flask_restful import Resource, reqparse
 from flask_jwt_extended import jwt_required
+from flask import request, jsonify
 from app.models.item import ItemModel
 from app.util.logz import create_logger
+import requests
+import os
+import json
 
 
 class Item(Resource):
@@ -63,10 +67,62 @@ class Item(Resource):
 
         return item.json()
 
-
 class ItemList(Resource):
     @jwt_required()
     def get(self):
         return {
             'items': [item.json() for item in ItemModel.query.all()]}  # More pythonic
         ##return {'items': list(map(lambda x: x.json(), ItemModel.query.all()))} #Alternate Lambda way
+
+    def post(self):
+        # consumer_key = "aQGAuq8eK4ZGE6gjRaKAenyUbAcCHm5n"
+        # consumer_secret = "dstGxFop99StU988"
+        # basic_auth = "YVFHQXVxOGVLNFpHRTZnalJhS0FlbnlVYkFjQ0htNW46ZHN0R3hGb3A5OVN0VTk4OA=="
+        try:
+            MPESA_AUTHORIZATION = os.getenv("MPESA_AUTHORIZATION")
+            url = os.getenv("MPESA_SANDBOX_URL")
+            headers = {
+                'Authorization': 'Basic {}'.format(MPESA_AUTHORIZATION)
+            }
+            response = requests.get(url, headers=headers)
+            data = response.json()
+            access_token = data["access_token"]
+            return access_token
+        except Exception as e:
+            self.logger.error(f'error: {e}')
+            return jsonify({"message": "Something went wrong"}), 400
+
+            
+class Mpesa(Resource):
+    def __init__(self):
+        self.logger = create_logger()
+
+    def post(self):
+        try:
+            url = "https://sandbox.safaricom.co.ke/mpesa/c2b/v2/simulate"
+
+            payload = json.dumps({
+            "ShortCode": "174379",
+            "CommandID": "CustomerPayBillOnline",
+            "Amount": "20",
+            "Msisdn": "254708374149",
+            "BillRefNumber": "leta"
+            })
+            headers = {
+            'Authorization': 'Bearer Fc3d3s6WuWLzUxZA0SALK1PXvHnI',
+            'Content-Type': 'application/json',
+            'Cookie': 'incap_ses_1018_2742146=HpHAXw7zryv+VZFkjaogDrj/X2MAAAAAdwqR0GAQ5tSSizj+2kVkQA==; visid_incap_2742146=JKOitNnwRreQNa4gz+z5PDjxX2MAAAAAQUIPAAAAAAA4g/eIoKbEXPwsBpFd78bK'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+            return response
+        except Exception as e:
+            self.logger.error(f'error: {e}')
+            return jsonify({"message": "Something went wrong"}), 400
+
+    def get(self):
+        
+
+

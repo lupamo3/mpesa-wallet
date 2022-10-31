@@ -6,7 +6,7 @@ from flask import Flask
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
 
-from app.resources.item import Item, ItemList
+from app.resources.item import Item, ItemList, Mpesa
 from app.resources.store import Store, StoreList
 from app.resources.user import UserRegister, User
 from app.config import postgresqlConfig
@@ -33,6 +33,7 @@ def create_tables():
 api.add_resource(Item, '/item/<string:name>')
 api.add_resource(ItemList, '/items')
 api.add_resource(UserRegister, '/register')
+api.add_resource(Mpesa, '/mpesa')
 api.add_resource(User, '/user')
 api.add_resource(Store, '/store/<string:name>')
 api.add_resource(StoreList, '/stores')
