@@ -74,7 +74,12 @@ class ItemList(Resource):
             'items': [item.json() for item in ItemModel.query.all()]}  # More pythonic
         ##return {'items': list(map(lambda x: x.json(), ItemModel.query.all()))} #Alternate Lambda way
 
-    def post(self):
+            
+class Mpesa(Resource):
+    def __init__(self):
+        self.logger = create_logger()
+
+    def mpesa_authorization(self):
         # consumer_key = "aQGAuq8eK4ZGE6gjRaKAenyUbAcCHm5n"
         # consumer_secret = "dstGxFop99StU988"
         # basic_auth = "YVFHQXVxOGVLNFpHRTZnalJhS0FlbnlVYkFjQ0htNW46ZHN0R3hGb3A5OVN0VTk4OA=="
@@ -92,37 +97,43 @@ class ItemList(Resource):
             self.logger.error(f'error: {e}')
             return jsonify({"message": "Something went wrong"}), 400
 
-            
-class Mpesa(Resource):
-    def __init__(self):
-        self.logger = create_logger()
-
     def post(self):
         try:
-            url = "https://sandbox.safaricom.co.ke/mpesa/c2b/v2/simulate"
-
-            payload = json.dumps({
-            "ShortCode": "174379",
-            "CommandID": "CustomerPayBillOnline",
-            "Amount": "20",
-            "Msisdn": "254708374149",
-            "BillRefNumber": "leta"
-            })
+            authorization_header = self.mpesa_authorization()
             headers = {
-            'Authorization': 'Bearer Fc3d3s6WuWLzUxZA0SALK1PXvHnI',
-            'Content-Type': 'application/json',
-            'Cookie': 'incap_ses_1018_2742146=HpHAXw7zryv+VZFkjaogDrj/X2MAAAAAdwqR0GAQ5tSSizj+2kVkQA==; visid_incap_2742146=JKOitNnwRreQNa4gz+z5PDjxX2MAAAAAQUIPAAAAAAA4g/eIoKbEXPwsBpFd78bK'
-            }
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {}'.format(authorization_header)
+                }
+            data = request.get_json()
+            payload = json.dumps({
+                "ShortCode": data["ShortCode"],
+                "CommandID": data["CommandID"],
+                "Amount": data["Amount"],
+                "Msisdn": data["Msisdn"],
+                "BillRefNumber": data["BillRefNumber"]
+                })
+            c2b_url = os.getenv("MPESA_C2B_URL")
 
-            response = requests.request("POST", url, headers=headers, data=payload)
+            response = requests.post(c2b_url, headers=headers, data=payload)
+            self.logger.info(f'response: {response}')
+            data = response.json()
+            response_code = data["ResponseCode"]
+            if response_code == '400':
+                return jsonify({"message": "Application level error"}), 400
+            elif response_code == '0':
+                return jsonify({"message": "Successful"}), 200
 
-            print(response.text)
-            return response
+            else:
+                return jsonify({"message": "Unsuccesfull"})
+
         except Exception as e:
             self.logger.error(f'error: {e}')
             return jsonify({"message": "Something went wrong"}), 400
 
     def get(self):
-        
-
+        try:
+            ...
+        except Exception as e:
+            self.logger.error(f'error: {e}')
+            return jsonify({"message": "Something went wrong"}), 400
 
